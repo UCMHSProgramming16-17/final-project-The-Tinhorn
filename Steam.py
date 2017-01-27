@@ -4,11 +4,10 @@ import json
 import csv
 import bokeh
 import pandas as pd
-import logging
-from bokeh.charts import Bar, output_file, save
+from bokeh.charts import Bar, output_file, save, Donut
 
 #Ask the user what type of information they want
-style = input("What do you want to request:  \n1: Achievements  \n2: Playtime in Recent Games ")
+style = input("What do you want to request:  \n1: Achievements  \n2: Playtime in Recent Games  \n3: Global Achievement Stats ")
 #Assign variable for the base url
 base_url = 'http://api.steampowered.com/'
 key = '8E889E83A42C15D13E11EA54405CF63A'
@@ -18,6 +17,8 @@ name_list = []
 done_list = []
 title_list = []
 play_list = []
+name2_list = []
+percentage_list = []
 
 #Function for getting completed achievements
 def achievements():
@@ -118,6 +119,42 @@ def time():
     save(bar)
     print("complete")
 
+#Function for Global Percentage
+def percent():
+    
+    #Ask user
+    appid = input("Enter the app ID of the game: ")
+    base_url = "http://api.steampowered.com/"               
+    url = base_url + 'ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid=' + appid +'&format=json'
+    r = requests.get(url)
+    game = r.json()
+    
+    #Creates the CSV file that is going to be plotted
+    for n in game["achievementpercentages"]["achievements"]:
+        name2 = n["name"]
+        percentage = n["percent"]
+        name2_list.append(name2)
+        percentage_list.append(percentage)    
+        
+    csvfile = open("Percent.csv", "w")
+    csvwriter = csv.writer(csvfile, delimiter = ",")
+
+    # Establish header row.
+    csvwriter.writerow(["Name", "Percent"])
+    
+    #Write the CSV file
+    rows = list(zip(name2_list, percentage_list))
+    for row in rows:
+        csvwriter.writerow(row)
+    csvfile.close()
+    
+    #Create bar chart
+    percentbar = pd.read_csv("Percent.csv")
+    barpercent = Bar(percentbar, "Name", legend=False, values="Percent", title="Global Percentages of achievements", bar_width=0.5, color='#268999', xlabel = "Name", ylabel = "Percentage of User with Achievement")
+    output_file("barpercent.html")
+    save(barpercent)
+    print("complete")
+    
 #If else staments to determine what information the user is looking for based on input
 if style.lower() == "1":
     SteamID = input("What is your Steam ID: ")      #Required SteamID to see the stats for the user
@@ -127,8 +164,11 @@ elif style.lower() == "2":
     SteamID = input("What is your Steam ID: ")      #Required SteamID to see the stats for the user
     time()
     
+elif style.lower() == "3":
+    percent()
+    
 else:
-    print("You can request: Achievements, Recent Games, and Global Achievement Stats ")
+    print("Enter the number not the text")
     
 input("Press any key to end the code...")           #Press a key to end the code
 
